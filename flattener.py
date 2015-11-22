@@ -347,10 +347,10 @@ if __name__ == "__main__":
 
 
 		# Activation tags for different elements
-        activation_dictionary = {
-        	'state-transition-element':'activate-on-match',
-            'counter':'activate-on-target',
-            'inverter':'activate-on-high'}
+
+		activation_dictionary = {'state-transition-element':'activate-on-match',
+					'counter':'activate-on-target',
+					'inverter':'activate-on-high'}
 
 		# print all children of root
 		for child in root:
