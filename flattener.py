@@ -13,11 +13,13 @@
 	v1.5
 	
 '''
-
 import sys
 import xml.etree.ElementTree as ET
 import copy
-VERBOSITY = False
+import os.path
+VERBOSITY = True
+
+reference_addresses = {}
 
 # Flatten the macro
 def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
@@ -283,6 +285,12 @@ def grab_macro_details(macro):
 	macro_id = macro.attrib['id']
 	macro_use = macro.attrib['use']
 
+	# Replace macro_use with actual address
+	if macro_use in reference_addresses:
+		macro_use = reference_addresses[macro_use]
+	else:
+		print "Couldnt replace ", macro_use
+
 	# Not necessarily used
 	activate_out = macro.find('activate-out')
 	subs = macro.find('substitutions')			
@@ -303,6 +311,12 @@ def grab_macro_details(macro):
 
 
 	return macro_id, macro_use, activations, substitutions
+
+# Print children
+def print_children(root):
+	for child in root:
+		print child.tag, child.attrib
+	return
 
 # Main()
 if __name__ == "__main__":
@@ -331,6 +345,32 @@ if __name__ == "__main__":
 
 		# Grab the root node
 		root = tree.getroot()
+
+		# If include-macro is defined at root level
+		include_macros = root.findall('include-macro')
+
+		print include_macros
+
+		if len(include_macros) > 0:
+
+			for include_macro in include_macros:
+
+				macro_filename =  include_macro.attrib['ref']
+
+				if not os.path.isfile(macro_filename):
+					print "ERROR: %s cannot be found as a valid macro " % macro_filename
+					exit()
+				else:
+					reference_key = (macro_filename[0:macro_filename.find('_macro.anml')]).strip()
+					reference_addresses[reference_key] = macro_filename
+					#print "reference addresses[", reference_key, '] = ', macro_filename
+
+		# Check if in automata level of anml
+		automata_network = root.find('automata-network')
+
+		if automata_network is not None:
+			root = automata_network
+
 		parent_id = 'root'
 
 		# Empty dictionary to populate with new names and connection
@@ -345,9 +385,7 @@ if __name__ == "__main__":
 			# We're done with the macro; remove it
 			root.remove(macro)
 
-
 		# Activation tags for different elements
-
 		activation_dictionary = {'state-transition-element':'activate-on-match',
 					'counter':'activate-on-target',
 					'inverter':'activate-on-high'}
