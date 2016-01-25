@@ -1,0 +1,5 @@
+24 January 2016
+
+The current version of the flattener does not work with counters. Below is a descriptions of the issues related to counters:
+1. Parameterized count values are not set to their correct parameter values.
+2. Counter 'activate-on-target' values do not consider their hierarchical pathname.
