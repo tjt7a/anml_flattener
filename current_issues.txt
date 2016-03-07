@@ -1,3 +1,7 @@
+7 March 2016
+
+Added support for new ANML format with <include-library>
+
 24 January 2016
 
 The current version of the flattener does not work with counters. Below is a descriptions of the issues related to counters:

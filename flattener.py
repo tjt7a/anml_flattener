@@ -21,13 +21,15 @@ VERBOSITY = True
 
 reference_addresses = {}
 
+delimiter = "___"
+
 # Flatten the macro
 def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 
 	macro_id, macro_use, activations, substitutions = grab_macro_details(macro)
 
 	# The new id is (path-to-macro)--(macro id)
-	new_id = parent_id + '--' + macro_id
+	new_id = parent_id + delimiter + macro_id
 
 	try:
 		if VERBOSITY:
@@ -98,7 +100,7 @@ def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 		elif child.tag in ['state-transition-element', 'counter', 'inverter']:
 
 			# Update the id of the element
-			temp_id = new_id + "--" + child.attrib['id']
+			temp_id = new_id + delimiter + child.attrib['id']
 			child.set('id', temp_id)
 
 			if temp_id in ports_out:
@@ -114,20 +116,20 @@ def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 					if len(activations.keys()) > 0:
 
 						# We're inside the macro now, but our macro is linking out, so outside the macro (i think)
-						for activation in activations[out_connection.split('--')[-1]]:
+						for activation in activations[out_connection.split(delimiter)[-1]]:
 							temp_element = ET.Element(activation_dictionary[child.tag])
 							link_to = ''
 
 							if activation[1] is not None:
 								if activation[1] is not 'cnt':
-									link_to = parent_id + "--" + activation[0] + "--" + activation[1]
+									link_to = parent_id + delimiter + activation[0] + delimiter + activation[1]
 								else:
-									link_to = parent_id + "--" + activation[0] + ":" + activation[1]
+									link_to = parent_id + delimiter + activation[0] + ":" + activation[1]
 
 								temp_element.set('element', link_to)
 
 							else:
-								link_to = parent_id + "--" + activation[0]
+								link_to = parent_id + delimiter + activation[0]
 								temp_element.set('element', link_to)
 
 							child.append(temp_element)
@@ -137,7 +139,7 @@ def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 
 				for link in child.findall('activate-on-match'):
 
-					new_value = new_id + "--" + link.attrib['element']
+					new_value = new_id + delimiter + link.attrib['element']
 
 					link.set('element', new_value)
 
@@ -222,12 +224,12 @@ def grab_port_definitions(port_defs, new_id):
 
 			for element in child:
 
-				activate_from_name = new_id+'--'+child.attrib['id'] # Macro_id + external port name
-				new_ste_name = new_id+'--'+element.attrib['element'] # Macro_id + STE name
+				activate_from_name = new_id+delimiter+child.attrib['id'] # Macro_id + external port name
+				new_ste_name = new_id+delimiter+element.attrib['element'] # Macro_id + STE name
 
 				# Another hack to disable translation for counter
 				if ':cnt' not in new_ste_name:
-					new_ste_name = new_ste_name.replace(':', "--")
+					new_ste_name = new_ste_name.replace(':', delimiter)
 
 				#if element.attrib['element'] in ports_in:
 				#	ports_in[element.attrib['element']].append(child.attrib['id'])
@@ -246,8 +248,8 @@ def grab_port_definitions(port_defs, new_id):
 
 			for element in child:
 
-				new_ste_name = new_id+"--"+element.attrib['element']
-				to_port = new_id+"--"+child.attrib['id']
+				new_ste_name = new_id+delimiter+element.attrib['element']
+				to_port = new_id+delimiter+child.attrib['id']
 
 				if new_ste_name in ports_out:
 				#if child.attrib['id'] in ports_out:
@@ -318,6 +320,40 @@ def print_children(root):
 		print child.tag, child.attrib
 	return
 
+# Load a library of macro definitions
+def load_library(library):
+
+	library_dictionary = {}
+	
+	library_filename = library.attrib['ref'].strip()
+
+	if not os.path.isfile(library_filename):
+		print "Error: %s cannot be found as a valid library file" % library_filename
+		exit()
+
+	else:
+
+		print "Loading Dictionary of Macro Definitions"
+		library_tree = ET.parse(library_filename)
+		root = library_tree.getroot()
+
+		library_defs = root.findall('library-definition')
+
+		for library_def in library_defs:
+
+			library_id = library_def.attrib['id']
+
+			for include_macro in library_def.findall('include-macro'):
+
+				macro_ref = include_macro.attrib['ref']
+				key = library_id+'.'+macro_ref.split('.')[0]
+				library_dictionary[key] = macro_ref
+				print key +" -> ", macro_ref
+
+		return library_dictionary
+
+
+
 # Main()
 if __name__ == "__main__":
 
@@ -346,12 +382,12 @@ if __name__ == "__main__":
 		# Grab the root node
 		root = tree.getroot()
 
-		# If include-macro is defined at root level
+		# If include-macro is defined at root level (we're assuming there's only one)
 		include_macros = root.findall('include-macro')
 
 		print include_macros
 
-		if len(include_macros) > 0:
+		if len(include_macros) > 0 :
 
 			for include_macro in include_macros:
 
@@ -364,6 +400,18 @@ if __name__ == "__main__":
 					reference_key = (macro_filename[0:macro_filename.find('_macro.anml')]).strip()
 					reference_addresses[reference_key] = macro_filename
 					#print "reference addresses[", reference_key, '] = ', macro_filename
+				root.remove(include_macro)
+
+		# If include-library is defined at the root level
+		include_library = root.find('include-library')
+
+		print include_library
+
+		if include_library is not None:
+
+			reference_addresses = load_library(include_library)
+			root.remove(include_library)
+
 
 		# Check if in automata level of anml
 		automata_network = root.find('automata-network')
@@ -393,10 +441,10 @@ if __name__ == "__main__":
 		# print all children of root
 		for child in root:
 
-			# If any root elements have not been translated; translate (:, --)
+			# If any root elements have not been translated; translate (:, delimiter)
 			if 'id' in child.attrib:
 				if 'root' not in child.attrib['id']:
-					child.set('id', 'root' + '--' + child.attrib['id'])
+					child.set('id', 'root' + delimiter + child.attrib['id'])
 
 			if child.tag in activation_dictionary:
 				activation_string = activation_dictionary[child.tag]
@@ -407,14 +455,14 @@ if __name__ == "__main__":
 			for link in child.findall(activation_string):#'activate-on-match'):
 
 				if 'root' not in link.attrib['element']:
-					old_value = "root" + "--" + link.attrib['element']
+					old_value = "root" + delimiter + link.attrib['element']
 
 				else:
 					old_value = link.attrib['element']
 
 				# If the old element value used ':', substitute for '_'; but not for counter
 				if child.tag != 'counter':
-					old_value = old_value.replace(':', "--")
+					old_value = old_value.replace(':', delimiter)
 
 				if old_value in connection_dictionary:
 
