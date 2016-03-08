@@ -10,7 +10,7 @@
 	usage: flattener.py <input anml filename> <output anml filename>
 
 	Author: Tom Tracy II (tjt7a@virginia.edu)
-	v1.5
+	# v1.6
 	
 '''
 import sys

@@ -1,6 +1,7 @@
 7 March 2016
 
-Added support for new ANML format with <include-library>
+Added support for new ANML version 1.0 with <include-library> file.
+Macros are defined in this file.
 
 24 January 2016
 
