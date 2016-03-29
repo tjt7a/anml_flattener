@@ -1,3 +1,8 @@
+28 March 2016
+
+Fixed some issues with inserting delimiters between <counter> and [':rst' and ':cnt']
+Added STEP_THROUGH for debugging
+
 7 March 2016
 
 Added support for new ANML version 1.0 with <include-library> file.
