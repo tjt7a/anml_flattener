@@ -2,9 +2,9 @@
 
 '''
 
-	This is the ANML flattener. It accepts a hierarchical ANML file using
+	This is the ANML flattener. It accepts a hierarchical ANML file using 
 	macros, and returns a flattened version using only elements.
-
+		
 	*So far only support STEs, Counters, and Inverters
 
 	usage: flattener.py <input anml filename> <output anml filename>
@@ -12,7 +12,7 @@
 	Author: Tom Tracy II (tjt7a@virginia.edu)
 	26 March 2016
 	v1.6
-
+	
 '''
 
 import sys
@@ -20,7 +20,7 @@ import xml.etree.ElementTree as ET
 import copy
 import os.path
 
-VERBOSITY = True
+VERBOSITY = False
 STEP_THROUGH = False
 
 reference_addresses = {}
@@ -41,7 +41,7 @@ def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 	try:
 		if VERBOSITY:
 			print "Parsing: ", macro_use
-
+		
 		macro_subtree = ET.parse(macro_use).getroot()
 
 	except IOError:
@@ -64,7 +64,7 @@ def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 			print "Found a <interface-declarations> tag in the macro header"
 
 		inner_interface_declarations = grab_inner_declarations(inner_inter)
-
+		
 	if inner_params is not None:
 
 		if VERBOSITY:
@@ -95,7 +95,7 @@ def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 
 	if VERBOSITY:
 		print "Updated substitutions: ", substitutions
-
+	
 	if STEP_THROUGH:
 		raw_input("Press Enter to continue...")
 
@@ -148,7 +148,7 @@ def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 
 			if VERBOSITY:
 				print "Found a macro reference; time to flatten:"
-
+				
 			root, connection_dictionary = flatten(root, macro_subtree, child, new_id, connection_dictionary)
 
 		elif child.tag in ['state-transition-element', 'counter', 'inverter']:
@@ -195,7 +195,7 @@ def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 
 								if activation[1] is not 'cnt':
 									link_to = parent_id + delimiter + activation[0] + delimiter + activation[1]
-
+								
 								else:
 									link_to = parent_id + delimiter + activation[0] + ":" + activation[1]
 
@@ -207,7 +207,7 @@ def flatten(root, macro_subtree, macro, parent_id, connection_dictionary):
 
 							if VERBOSITY:
 								print "Created a new temp element to link to: ", link_to
-
+							
 							temp_element.set('element', link_to)
 							child.append(temp_element)
 
@@ -263,7 +263,7 @@ def grab_activations(activate_out):
 			if VERBOSITY:
 				print "Could not find an element port"
 
-		destination = (element_id, element_port)
+		destination = (element_id, element_port)			
 
 		if source not in activations:
 
@@ -285,7 +285,7 @@ def grab_activations(activate_out):
 		if VERBOSITY:
 			print "----------"
 
-	return activations
+	return activations	
 
 def grab_substitutions(substitute):
 
@@ -342,7 +342,7 @@ def grab_inner_declarations(inner_interface):
 	for child in inner_interface:
 
 		inner_interface_declarations[child.attrib['id']] = child.attrib['type']
-
+		
 		if VERBOSITY:
 			print "Adding child id = ", child.attrib['id'], ", type = ", child.attrib['type'], "to inner interface declations"
 
@@ -373,9 +373,6 @@ def grab_port_definitions(port_defs, new_id):
 
 			for element in child:
 
-				if element.tag == 'layout':
-					continue
-
 				activate_from_name = new_id + delimiter + child.attrib['id'] # Macro_id + external port name
 				new_ste_name = new_id + delimiter + element.attrib['element'] # Macro_id + STE name
 
@@ -386,7 +383,7 @@ def grab_port_definitions(port_defs, new_id):
 				# Another hack to disable translation for counter
 				if (':cnt' not in new_ste_name) and (':rst' not in new_ste_name):
 					new_ste_name = new_ste_name.replace(':', delimiter)
-
+				
 				else:
 					if VERBOSITY:
 						print "Found a :cnt or :rst port!", new_ste_name
@@ -417,8 +414,6 @@ def grab_port_definitions(port_defs, new_id):
 
 			for element in child:
 
-				if element.tag == 'layout':
-					continue
 				new_ste_name = new_id + delimiter + element.attrib['element']
 				to_port = new_id + delimiter + child.attrib['id']
 
@@ -454,7 +449,7 @@ def replace_substitutions(body, substitutions):
 					print "Replacing ", child.attrib['symbol-set'], " with ", substitutions[child.attrib['symbol-set']]
 
 				child.set('symbol-set', substitutions[child.attrib['symbol-set']])
-
+		
 		if VERBOSITY:
 			print child.tag, "...", child.attrib
 
@@ -474,17 +469,17 @@ def grab_macro_details(macro):
 	# Replace macro_use with actual address
 	if macro_use in reference_addresses:
 
-		if VERBOSITY:
-			print "Replacing macro_use = ", macro_use, " with reference address = ", reference_addresses[macro_use]
-
 		macro_use = reference_addresses[macro_use]
+
+		if VERBOSITY:
+			print "Replacing macro_use = ", macro_use, " with reference address = ", macro.attrib['use']
 
 	else:
 		print "Couldnt replace ", macro_use
 
 	# Not necessarily used
 	activate_out = macro.find('activate-out')
-	subs = macro.find('substitutions')
+	subs = macro.find('substitutions')			
 
 	# Grab outward activations
 	if activate_out is not None:
@@ -525,7 +520,7 @@ def load_library(library):
 		print "----------"
 
 	library_dictionary = {}
-
+	
 	library_filename = library.attrib['ref'].strip()
 
 	if not os.path.isfile(library_filename):
@@ -551,8 +546,8 @@ def load_library(library):
 				macro_ref = include_macro.attrib['ref']
 				key = library_id+'.'+macro_ref.split('.')[0]
 				library_dictionary[key] = macro_ref
-
-				if VERBOSITY:
+				
+				if VERBOSITY: 
 					print key +" -> ", macro_ref
 
 		if VERBOSITY:
@@ -581,7 +576,7 @@ if __name__ == "__main__":
 		try:
 			if VERBOSITY:
 				print "Parsing input file: ", input_filename
-
+				
 			tree = ET.parse(input_filename)
 
 		except IOError:
@@ -666,7 +661,7 @@ if __name__ == "__main__":
 
 			# Flatten the macro (root is root and the current subtree we're into)
 			root, connection_dictionary = flatten(root, root, macro, parent_id, connection_dictionary)
-
+			
 			# We're done with the macro; remove it
 			root.remove(macro)
 

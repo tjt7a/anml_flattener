@@ -1,7 +1,3 @@
-4 June 2016
-
-Put some continues to ignore <layout> tags when extracting port information.
-
 28 March 2016
 
 Fixed some issues with inserting delimiters between <counter> and [':rst' and ':cnt']
